@@ -1,0 +1,158 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.3</storyId>
+    <title>API Resilience & Error Handling Improvements</title>
+    <status>Approved</status>
+    <generatedAt>2025-10-14</generatedAt>
+    <generator>Manual Story Context Creation</generator>
+    <sourceStoryPath>/Users/masonwood/bmad-project-delete-skus/stories/story-3.3.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>Backend Developer</asA>
+    <iWant>robust API resilience patterns</iWant>
+    <soThat>the cleanup tool can handle Amazon API failures gracefully</soThat>
+    <tasks>## Tasks / Subtasks
+
+- [ ] Implement exponential backoff strategy for API calls (AC: #1)
+  - [ ] Add retry decorator with exponential backoff (base delay: 1s, max delay: 60s)
+  - [ ] Handle 429 (rate limit) errors with appropriate backoff
+  - [ ] Handle 500/502/503 errors with shorter backoff
+- [ ] Implement connection pooling for HTTP requests (AC: #2)
+  - [ ] Configure connection pool with appropriate limits
+  - [ ] Reuse connections for multiple API calls
+  - [ ] Handle connection timeouts and cleanup
+- [ ] Add circuit breaker pattern (AC: #3)
+  - [ ] Monitor API call success/failure rates
+  - [ ] Implement threshold-based circuit breaking (e.g., 50% failure rate)
+  - [ ] Auto-recovery after cooldown period
+- [ ] Enhance error handling and recovery (AC: #4, #5)
+  - [ ] Distinguish between permanent and transient errors
+  - [ ] Continue processing when individual calls fail
+  - [ ] Implement retry limits to prevent infinite loops
+  - [ ] Add comprehensive error logging with context</tasks>
+  </story>
+
+  <acceptanceCriteria>## Acceptance Criteria
+
+1. **Exponential Backoff Implementation** - API calls implement exponential backoff strategy for rate limit handling
+2. **Connection Pool Management** - Reuse connections to reduce SSL handshake overhead and improve performance
+3. **Circuit Breaker Pattern** - Temporarily halt processing when error rates exceed threshold (e.g., >50% failures)
+4. **Graceful Degradation** - Continue processing other SKUs when individual API calls fail
+5. **Enhanced Error Recovery** - Automatic retry with intelligent backoff for transient failures</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/logs/sku_cleanup.log</path>
+        <title>Production Run Logs</title>
+        <section>API Error Analysis</section>
+        <snippet>Shows 1,491 errors/warnings including 429 rate limit errors, connection resets, and SSL EOF errors</snippet>
+      </artifact>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/epics.md</path>
+        <title>Epic 3: Cleanup Execution & Reporting</title>
+        <section>Story 3.3 Definition</section>
+        <snippet>Part of Epic 3 focusing on API resilience improvements</snippet>
+      </artifact>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Amazon API Integration</section>
+        <snippet>Current API implementation details and requirements</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/sku-cleanup-tool/amazon_api.py</path>
+        <kind>Python Module</kind>
+        <symbol>AmazonAPI class</symbol>
+        <lines>Core API interaction logic - primary file to modify</lines>
+        <reason>Contains existing API call methods that need resilience patterns</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/sku-cleanup-tool/data_processor.py</path>
+        <kind>Python Module</kind>
+        <symbol>DataProcessor class</symbol>
+        <lines>Error handling for FBA checks - needs enhanced error handling</lines>
+        <reason>Processes API responses and handles FBA inventory checks</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/masonwood/bmad-project-delete-skus/sku-cleanup-tool/config.py</path>
+        <kind>Python Module</kind>
+        <symbol>Config class</symbol>
+        <lines>Configuration management - needs resilience parameters</lines>
+        <reason>Store configuration for retry limits, timeouts, circuit breaker thresholds</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Python">
+        <package name="requests" version=">=2.25.0">HTTP client for API calls</package>
+        <package name="boto3" version=">=1.20.0">AWS SDK for authentication</package>
+        <package name="botocore" version=">=1.23.0">Low-level AWS client</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>## Development Constraints
+
+- **Backward Compatibility**: Maintain existing functionality while adding resilience features
+- **Performance Impact**: Ensure resilience features don't significantly degrade performance
+- **Configuration**: Add configurable parameters for retry limits, timeouts, and thresholds
+- **Logging**: Enhance error logging without exposing sensitive information
+- **Testing**: Implement comprehensive error scenario testing</constraints>
+
+  <interfaces>## Required Interfaces
+
+- **AmazonAPI.check_fba_inventory(sku)**: Returns FBA inventory data for a SKU
+- **AmazonAPI.get_merchant_listings()**: Retrieves all SKU data from Amazon
+- **AmazonAPI.delete_sku(sku)**: Deletes a SKU (used in dry-run mode)
+- **DataProcessor.process_sku_data(sku_data)**: Processes SKU data with FBA verification</interfaces>
+
+  <tests>
+    <standards>## Testing Standards
+
+**Testing Framework**: pytest with fixtures for API mocking
+**Coverage Requirements**: 100% for new resilience code, maintain existing coverage
+**Mock Strategy**: Use responses library to mock HTTP requests and simulate API failures
+**Error Testing**: Test all error scenarios (429, 500, 502, 503, connection errors)
+**Performance Testing**: Ensure resilience features don't add significant latency</standards>
+    <locations>## Test Locations
+
+- `sku-cleanup-tool/test_api.py` - Existing API tests to extend
+- `tests/test_resilience.py` - New file for resilience pattern tests
+- `tests/test_error_scenarios.py` - Error handling and recovery tests</locations>
+    <ideas>## Test Ideas by Acceptance Criteria
+
+**AC #1 - Exponential Backoff**:
+- Test 429 errors trigger appropriate backoff delays
+- Test 500 errors use shorter backoff than 429 errors
+- Test maximum delay caps are respected
+- Test successful retry after backoff period
+
+**AC #2 - Connection Pooling**:
+- Test connection reuse across multiple API calls
+- Test connection pool limits prevent resource exhaustion
+- Test connection cleanup on errors
+- Test performance improvement with pooling
+
+**AC #3 - Circuit Breaker**:
+- Test circuit opens after failure threshold (50%)
+- Test circuit prevents new calls when open
+- Test auto-recovery after cooldown period
+- Test failure rate calculation accuracy
+
+**AC #4 - Graceful Degradation**:
+- Test processing continues when individual API calls fail
+- Test partial results are returned when possible
+- Test appropriate error logging for failed calls
+- Test no cascading failures from individual errors
+
+**AC #5 - Enhanced Error Recovery**:
+- Test distinction between permanent and transient errors
+- Test retry limits prevent infinite loops
+- Test different backoff strategies for different error types
+- Test comprehensive error context in logs</ideas>
+  </tests>
+</story-context>

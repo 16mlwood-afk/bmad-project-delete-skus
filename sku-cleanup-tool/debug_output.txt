@@ -1,0 +1,45 @@
+2025-10-14 11:39:49,075 - __main__ - INFO - ============================================================
+2025-10-14 11:39:49,075 - __main__ - INFO - AMAZON SKU CLEANUP TOOL - Starting Execution
+2025-10-14 11:39:49,075 - __main__ - INFO - ============================================================
+2025-10-14 11:39:49,075 - __main__ - INFO - Configuration:
+2025-10-14 11:39:49,075 - __main__ - INFO -   Dry Run Mode: True
+2025-10-14 11:39:49,075 - __main__ - INFO -   Age Threshold: 30 days
+2025-10-14 11:39:49,075 - __main__ - INFO -   Batch Size: 100
+2025-10-14 11:39:49,075 - __main__ - INFO -   Marketplace: A1F83G8C2ARO7P
+2025-10-14 11:39:49,075 - __main__ - INFO -   Skip SKUs: 0
+2025-10-14 11:39:49,117 - __main__ - INFO - Starting SKU cleanup process...
+2025-10-14 11:39:49,117 - __main__ - INFO - Step 1: Retrieving merchant listings...
+2025-10-14 11:39:49,117 - amazon_api - INFO - Creating merchant listings report...
+2025-10-14 11:39:49,117 - amazon_api - INFO - Getting new access token...
+2025-10-14 11:39:49,992 - amazon_api - INFO - Successfully obtained access token
+2025-10-14 11:39:50,974 - amazon_api - INFO - Created report with ID: 855142020375
+2025-10-14 11:39:50,975 - amazon_api - INFO - Waiting for report to be ready...
+2025-10-14 11:40:22,364 - amazon_api - INFO - Report completed after 2 attempts
+2025-10-14 11:40:22,365 - amazon_api - INFO - Downloading report data...
+2025-10-14 11:40:24,653 - amazon_api - INFO - Parsed 1856 SKUs from report
+2025-10-14 11:40:24,654 - __main__ - INFO - Retrieved 1856 SKUs from Amazon
+2025-10-14 11:40:24,654 - __main__ - INFO - Step 2: Processing SKU data...
+2025-10-14 11:40:24,654 - data_processor - INFO - Starting to process 1856 raw SKUs
+2025-10-14 11:40:24,654 - data_processor - WARNING - Skipping SKU with missing SKU field at index 0
+2025-10-14 11:40:24,654 - data_processor - WARNING - Skipping SKU with missing SKU field at index 1
+2025-10-14 11:40:24,654 - data_processor - WARNING - Skipping SKU with missing SKU field at index 2
+2025-10-14 11:40:24,655 - __main__ - INFO - Processed 0 valid SKUs
+2025-10-14 11:40:24,655 - __main__ - INFO - Step 3: Identifying SKUs for deletion...
+2025-10-14 11:40:24,655 - __main__ - INFO - Found 0 SKUs eligible for deletion (FBA-verified)
+2025-10-14 11:40:24,655 - __main__ - INFO - Step 4: Executing deletions...
+2025-10-14 11:40:24,655 - __main__ - INFO - Processing 0 pre-verified SKUs...
+2025-10-14 11:40:24,655 - __main__ - INFO - No SKUs to delete
+2025-10-14 11:40:24,655 - __main__ - INFO - Step 5: Generating cleanup report...
+2025-10-14 11:40:24,655 - report_generator - INFO - Report saved to: reports/sku-cleanup-report-2025-10-14_11-40-24.md
+2025-10-14 11:40:24,655 - __main__ - INFO - SKU cleanup process completed successfully
+2025-10-14 11:40:24,655 - __main__ - INFO - ============================================================
+2025-10-14 11:40:24,655 - __main__ - INFO - CLEANUP RESULTS SUMMARY
+2025-10-14 11:40:24,655 - __main__ - INFO - ============================================================
+2025-10-14 11:40:24,655 - __main__ - INFO - Total SKUs Processed: 0
+2025-10-14 11:40:24,655 - __main__ - INFO - Eligible for Deletion: 0
+2025-10-14 11:40:24,655 - __main__ - INFO - Successfully Deleted: []
+2025-10-14 11:40:24,655 - __main__ - INFO - Skipped: []
+2025-10-14 11:40:24,655 - __main__ - INFO - Errors: []
+2025-10-14 11:40:24,655 - __main__ - INFO - Execution Time: 0.00 seconds
+2025-10-14 11:40:24,655 - __main__ - INFO - DRY RUN MODE - No actual deletions performed
+2025-10-14 11:40:24,656 - __main__ - INFO - ============================================================
