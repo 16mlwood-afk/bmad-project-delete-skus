@@ -4,7 +4,7 @@ Creates markdown reports with cleanup results and statistics
 """
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from pathlib import Path
 
@@ -15,7 +15,7 @@ class ReportGenerator:
 
     def __init__(self, output_dir: str = "reports"):
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_report(self, results: Dict[str, Any]) -> str:
         """Generate a comprehensive cleanup report"""
@@ -132,16 +132,18 @@ class ReportGenerator:
         cleaned_count = 0
         for report_file in self.output_dir.glob("sku-cleanup-report-*.md"):
             try:
-                # Extract date from filename
-                date_str = report_file.stem.split('-')[-1]  # Get YYYY-MM-DD_HH-MM-SS part
-                if '_' in date_str:
-                    file_date = datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
-                else:
-                    file_date = datetime.strptime(date_str, "%Y-%m-%d")
+                # Extract timestamp from filename (sku-cleanup-report-YYYY-MM-DD_HH-MM-SS.md)
+                filename = report_file.name
+                if filename.startswith("sku-cleanup-report-") and filename.endswith(".md"):
+                    date_str = filename[19:-3]  # Remove "sku-cleanup-report-" (19 chars) and ".md" (3 chars)
+                    if '_' in date_str:
+                        file_date = datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
+                    else:
+                        file_date = datetime.strptime(date_str, "%Y-%m-%d")
 
-                if file_date < cutoff_date:
-                    report_file.unlink()
-                    cleaned_count += 1
+                    if file_date < cutoff_date:
+                        report_file.unlink()
+                        cleaned_count += 1
 
             except (ValueError, OSError) as e:
                 logger.warning(f"Could not process report file {report_file}: {e}")
