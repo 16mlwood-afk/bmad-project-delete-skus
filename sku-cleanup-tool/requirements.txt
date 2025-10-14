@@ -3,5 +3,10 @@ boto3>=1.28.0              # AWS SDK for Python (SP-API)
 python-dotenv>=1.0.0       # Environment variable management
 requests>=2.31.0           # HTTP requests for API calls
 
+# Testing dependencies
+pytest>=7.0.0             # Testing framework
+pytest-mock>=3.10.0       # Mock utilities for testing
+pytest-cov>=4.0.0         # Coverage reporting
+
 # Optional: For better logging and CLI interface
 colorlog>=6.7.0            # Colored console logging
