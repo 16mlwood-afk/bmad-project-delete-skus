@@ -150,14 +150,36 @@ def get_cleanup_summary():
         print(f"Warning: Could not read log files: {e}")
         return None
 
-def send_oauth_email(to_email, subject, body):
-    """Send email via Gmail OAuth 2.0"""
+def send_oauth_email(to_email, subject, body, force_send=False):
+    """Send email via Gmail OAuth 2.0 with smart frequency logic"""
     try:
         # Import here to avoid errors if OAuth libraries aren't installed
-        from gmail_oauth_sender import send_email as oauth_send_email
+        from gmail_oauth_sender import send_email_with_recipients, should_send_email, send_error_alert
 
-        # Get sender email from environment
+        # Check if email should be sent (unless forced)
+        if not force_send:
+            should_send, reason, _ = should_send_email()
+            if not should_send:
+                print(f"📧 Email not sent: {reason}")
+                return True, f"Email skipped: {reason}"
+
+        # Get configuration from environment
         sender_email = os.getenv('GMAIL_USER', 'sales@bison.management')
+
+        # Get recipients from environment (support multiple)
+        primary_recipients = [to_email]
+        cc_recipients = os.getenv('EMAIL_CC', '').split(',') if os.getenv('EMAIL_CC') else []
+        bcc_recipients = os.getenv('EMAIL_BCC', '').split(',') if os.getenv('EMAIL_BCC') else []
+
+        # Filter out empty strings
+        cc_recipients = [email.strip() for email in cc_recipients if email.strip()]
+        bcc_recipients = [email.strip() for email in bcc_recipients if email.strip()]
+
+        recipients = {
+            'to': primary_recipients,
+            'cc': cc_recipients,
+            'bcc': bcc_recipients
+        }
 
         # Get actual cleanup summary from logs
         summary = get_cleanup_summary()
@@ -253,7 +275,7 @@ def send_oauth_email(to_email, subject, body):
             </html>
             """
 
-        return oauth_send_email(to_email, subject, html_body, sender_email)
+        return send_email_with_recipients(recipients, subject, html_body, sender_email)
     except ImportError:
         return False, "Gmail OAuth libraries not installed. Install with: pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client"
     except Exception as e:
@@ -265,6 +287,14 @@ def main():
     # Get configuration from environment
     to_email = os.getenv('DEFAULT_EMAIL_RECIPIENT', 'sales@bison.management')
     email_method = os.getenv('EMAIL_METHOD', 'oauth').lower()
+
+    # Get recipients from environment (support multiple)
+    cc_recipients = os.getenv('EMAIL_CC', '').split(',') if os.getenv('EMAIL_CC') else []
+    bcc_recipients = os.getenv('EMAIL_BCC', '').split(',') if os.getenv('EMAIL_BCC') else []
+
+    # Filter out empty strings
+    cc_recipients = [email.strip() for email in cc_recipients if email.strip()]
+    bcc_recipients = [email.strip() for email in bcc_recipients if email.strip()]
 
     # Email content (now dynamically generated from logs)
     subject = f"BMAD SKU Cleanup Report - {datetime.now().strftime('%Y-%m-%d')}"
@@ -280,10 +310,14 @@ def main():
 
     # Try email method based on configuration
     if email_method == 'oauth':
-        success, message = send_oauth_email(to_email, subject, body)
+        success, message = send_oauth_email(to_email, subject, body, force_send=False)
         if success:
             print("✅ Email sent successfully via Gmail OAuth 2.0")
-            print(f"📬 Check inbox at {to_email}")
+            if "skipped" not in message.lower():
+                print(f"📬 Check inbox at {to_email}")
+                if cc_recipients or bcc_recipients:
+                    print(f"📬 CC: {', '.join(cc_recipients)}" if cc_recipients else "")
+                    print(f"📬 BCC: {', '.join(bcc_recipients)}" if bcc_recipients else "")
         else:
             print(f"❌ OAuth failed: {message}")
             print()
@@ -292,6 +326,19 @@ def main():
             print("2. Run this script - it will open a browser for OAuth consent")
             print("3. Log in with your Google account (sales@bison.management)")
             print("4. Grant permissions for Gmail API access")
+
+        # Test error alerting if requested
+        if "--test-error-alert" in sys.argv:
+            print("\n🧪 Testing error alert system...")
+            from gmail_oauth_sender import send_error_alert
+            alert_success, alert_message = send_error_alert(
+                "Test error alert",
+                "This is a test of the error alerting system. If you receive this, error alerts are working correctly."
+            )
+            if alert_success:
+                print("✅ Error alert test successful")
+            else:
+                print(f"❌ Error alert test failed: {alert_message}")
 
     elif email_method == 'smtp':
         # Try Gmail SMTP first (legacy method)

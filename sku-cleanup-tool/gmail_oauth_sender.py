@@ -57,15 +57,83 @@ def create_message(sender, to, subject, body):
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
     return {'raw': raw_message}
 
-def send_email(to_email, subject, body, sender_email='sales@bison.management'):
+def should_send_email():
     """
-    Send email using Gmail API with OAuth 2.0
+    Determine if an email should be sent based on recent activity
+
+    Returns:
+        tuple: (should_send: bool, reason: str, summary: dict or None)
+    """
+    try:
+        # Read the main log file (last 100 lines for recent summary)
+        log_file = 'logs/sku_cleanup.log'
+        if not os.path.exists(log_file):
+            return False, "No log file found", None
+
+        # Get last 100 lines for summary
+        with open(log_file, 'r') as f:
+            lines = f.readlines()[-100:]
+
+        # Extract key metrics from log
+        total_processed = 0
+        eligible_for_deletion = 0
+        successfully_deleted = 0
+        errors = 0
+
+        for line in reversed(lines):
+            if 'Total SKUs Processed:' in line:
+                total_processed = int(line.split(':')[1].strip())
+            elif 'Eligible for Deletion:' in line:
+                eligible_for_deletion = int(line.split(':')[1].strip())
+            elif 'Successfully Deleted:' in line:
+                successfully_deleted = int(line.split(':')[1].strip())
+            elif 'Errors:' in line:
+                errors = int(line.split(':')[1].strip())
+
+        # Check if there were any meaningful changes
+        has_deletions = successfully_deleted > 0
+        has_eligible_skus = eligible_for_deletion > 0
+        has_errors = errors > 0
+        has_activity = total_processed > 0
+
+        # Determine if email should be sent
+        if has_deletions:
+            return True, f"SKUs were successfully deleted ({successfully_deleted} deletions)", None
+        elif has_eligible_skus:
+            return True, f"SKUs eligible for deletion found ({eligible_for_deletion} eligible)", None
+        elif has_errors:
+            return True, f"Errors occurred during execution ({errors} errors)", None
+        elif has_activity:
+            # Only send if it's been more than 24 hours since last email
+            # This prevents spam when there are no changes
+            last_email_file = 'logs/last_email_sent.txt'
+            if os.path.exists(last_email_file):
+                with open(last_email_file, 'r') as f:
+                    last_email_time = float(f.read().strip())
+                current_time = __import__('time').time()
+                hours_since_last_email = (current_time - last_email_time) / 3600
+
+                if hours_since_last_email < 24:
+                    return False, f"No changes detected, last email sent {hours_since_last_email:.1f} hours ago", None
+
+            return True, f"Activity detected ({total_processed} SKUs processed)", None
+        else:
+            return False, "No activity detected in logs", None
+
+    except Exception as e:
+        # If we can't read logs, send email to be safe
+        return True, f"Unable to analyze logs ({e}), sending precautionary email", None
+
+def send_email_with_recipients(recipients, subject, body, sender_email='sales@bison.management', priority='normal'):
+    """
+    Send email using Gmail API with OAuth 2.0 to multiple recipients
 
     Args:
-        to_email (str): Recipient email address
+        recipients (dict): {'to': [...], 'cc': [...], 'bcc': [...]}
         subject (str): Email subject
         body (str): Email body (can be HTML)
         sender_email (str): Sender email address (must match OAuth account)
+        priority (str): 'high', 'normal', or 'low' for email priority
 
     Returns:
         tuple: (success: bool, message: str)
@@ -78,17 +146,48 @@ def send_email(to_email, subject, body, sender_email='sales@bison.management'):
         service = build('gmail', 'v1', credentials=creds)
 
         # Create email message
-        message = create_message(sender_email, to_email, subject, body)
+        message = MIMEMultipart()
+        message['from'] = sender_email
+        message['subject'] = subject
+
+        # Add priority headers
+        if priority == 'high':
+            message['X-Priority'] = '1'
+            message['Importance'] = 'high'
+        elif priority == 'low':
+            message['X-Priority'] = '5'
+            message['Importance'] = 'low'
+
+        # Add recipients
+        if recipients.get('to'):
+            message['to'] = ', '.join(recipients['to'])
+        if recipients.get('cc'):
+            message['cc'] = ', '.join(recipients['cc'])
+        if recipients.get('bcc'):
+            message['bcc'] = ', '.join(recipients['bcc'])
+
+        # Add body as HTML for better formatting
+        msg = MIMEText(body, 'html')
+        message.attach(msg)
+
+        # Encode message
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
 
         # Send email
         sent_message = service.users().messages().send(
             userId='me',
-            body=message
+            body={'raw': raw_message}
         ).execute()
 
         message_id = sent_message['id']
         print(f"✅ Email sent successfully! Message ID: {message_id}")
-        return True, f"Email sent successfully to {to_email}"
+
+        # Track when email was sent to prevent spam
+        last_email_file = 'logs/last_email_sent.txt'
+        with open(last_email_file, 'w') as f:
+            f.write(str(__import__('time').time()))
+
+        return True, f"Email sent successfully to {len(recipients.get('to', []))} recipients"
 
     except HttpError as error:
         print(f"❌ Gmail API error: {error}")
@@ -96,6 +195,115 @@ def send_email(to_email, subject, body, sender_email='sales@bison.management'):
     except Exception as error:
         print(f"❌ Unexpected error: {error}")
         return False, f"Unexpected error: {error}"
+
+def send_email(to_email, subject, body, sender_email='sales@bison.management'):
+    """
+    Send email using Gmail API with OAuth 2.0 (legacy single recipient method)
+
+    Args:
+        to_email (str): Recipient email address
+        subject (str): Email subject
+        body (str): Email body (can be HTML)
+        sender_email (str): Sender email address (must match OAuth account)
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    recipients = {'to': [to_email], 'cc': [], 'bcc': []}
+    return send_email_with_recipients(recipients, subject, body, sender_email)
+
+def send_error_alert(error_message, error_details=None, priority='high'):
+    """
+    Send immediate error alert email for critical issues
+
+    Args:
+        error_message (str): Brief error description
+        error_details (str): Detailed error information
+        priority (str): 'high', 'normal', or 'low' for email priority
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        # Get OAuth credentials
+        creds = get_credentials()
+
+        # Build Gmail API service
+        service = build('gmail', 'v1', credentials=creds)
+
+        # Create email message
+        message = MIMEMultipart()
+        message['from'] = 'sales@bison.management'
+        message['to'] = 'sales@bison.management'
+        message['subject'] = f"🚨 CRITICAL: SKU Cleanup System Error Alert"
+
+        # Set high priority
+        message['X-Priority'] = '1'
+        message['Importance'] = 'high'
+
+        # Create error email body
+        timestamp = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S WITA')
+
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="background: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h2 style="color: #d32f2f; margin-top: 0;">🚨 CRITICAL SYSTEM ERROR</h2>
+                <p style="font-size: 16px; color: #d32f2f; font-weight: bold;">{error_message}</p>
+
+                <div style="background: #fff; border: 1px solid #ffcdd2; border-radius: 5px; padding: 15px; margin: 15px 0;">
+                    <h3 style="color: #d32f2f; margin-top: 0;">Error Details:</h3>
+                    <p style="font-family: monospace; background: #f8f8f8; padding: 10px; border-radius: 3px; font-size: 14px;">
+                        {error_details or 'No additional details available'}
+                    </p>
+                </div>
+
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0;">
+                    <h3 style="color: #1976d2; margin-top: 0;">System Information:</h3>
+                    <p><strong>Timestamp:</strong> {timestamp}</p>
+                    <p><strong>System:</strong> BMAD SKU Cleanup Tool</p>
+                    <p><strong>Priority:</strong> CRITICAL - Immediate attention required</p>
+                </div>
+
+                <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0;">
+                    <h3 style="color: #f57c00; margin-top: 0;">Recommended Actions:</h3>
+                    <ul>
+                        <li>Check system logs for detailed error information</li>
+                        <li>Verify API credentials and connectivity</li>
+                        <li>Review recent changes that may have caused the issue</li>
+                        <li>Contact system administrator if issue persists</li>
+                    </ul>
+                </div>
+
+                <p style="color: #666; font-size: 12px; margin-top: 20px;">
+                    This is an automated error alert from the BMAD SKU Cleanup System.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Add body as HTML
+        msg = MIMEText(html_body, 'html')
+        message.attach(msg)
+
+        # Encode message
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+        # Send email
+        sent_message = service.users().messages().send(
+            userId='me',
+            body={'raw': raw_message}
+        ).execute()
+
+        message_id = sent_message['id']
+        print(f"🚨 Critical error alert sent! Message ID: {message_id}")
+
+        return True, f"Error alert sent successfully"
+
+    except Exception as error:
+        print(f"❌ Failed to send error alert: {error}")
+        return False, f"Failed to send error alert: {error}"
 
 def test_gmail_oauth():
     """Test Gmail OAuth setup"""
