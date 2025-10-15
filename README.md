@@ -67,7 +67,7 @@ After each run, check the detailed execution logs and reports for your specific 
 ```bash
 # Python 3.8+
 # Amazon Selling Partner API credentials
-# Required Python packages (see requirements.txt)
+# Required Python packages (see src/sku-cleanup-tool/config/requirements.txt)
 ```
 
 ### Environment Setup
@@ -92,8 +92,8 @@ DRY_RUN=true python3 src/sku-cleanup-tool/main.py
 # Production run
 DRY_RUN=false python3 src/sku-cleanup-tool/main.py
 
-# Daily automated execution
-0 2 * * * cd /path/to/project && python3 src/sku-cleanup-tool/main.py >> src/sku-cleanup-tool/logs/daily_cleanup.log 2>&1
+# Daily automated execution (after deployment setup)
+0 2 * * * cd /Users/masonwood/bmad-project-delete-skus/src/sku-cleanup-tool && python3 main.py >> /var/log/sku-cleanup/sku-cleanup.log 2>&1
 ```
 
 ## 📁 Project Structure
@@ -101,21 +101,27 @@ DRY_RUN=false python3 src/sku-cleanup-tool/main.py
 ```
 📦 BMAD Project Workspace
 ├── 📁 src/
-│   └── 📁 sku-cleanup-tool/    # 🚀 Main Application
-│       ├── main.py             # Entry point
-│       ├── amazon_api.py       # Amazon API integration
-│       ├── data_processor.py   # Business logic and filtering
-│       ├── config.py           # Configuration management
-│       ├── resilience.py       # Error handling and retries
-│       ├── logs/               # Execution logs
-│       └── reports/            # Generated reports
+│   └── 📁 sku-cleanup-tool/    # 🚀 Main Application (Organized Structure)
+│       ├── core/               # 🧠 Core business logic
+│       │   ├── amazon_api.py   # Amazon SP-API integration
+│       │   ├── data_processor.py # SKU filtering & processing
+│       │   ├── config.py       # Configuration management
+│       │   ├── resilience.py   # Error handling & retries
+│       │   └── utils.py        # Helper utilities
+│       ├── email_utils/        # 📧 Email functionality
+│       ├── scripts/            # 🔧 Utility scripts
+│       ├── tests/              # 🧪 Test suite
+│       ├── config/             # ⚙️ Configuration files
+│       ├── docs/               # 📖 Project documentation
+│       ├── main.py             # 🚪 Entry point
+│       └── [deployment files]  # 🚀 Production setup
 ├── 📁 bmad/                    # 🤖 BMAD Framework (Installed)
 │   ├── core/                   # Core BMAD system
 │   ├── bmm/                    # BMAD Method module
 │   └── utility/                # Utility components
 ├── 📁 framework/
 │   └── 📁 bmad-method/         # 📚 BMAD Source Code (Separate repo)
-├── 📁 docs/                    # 📖 Documentation
+├── 📁 docs/                    # 📖 Project Documentation
 │   ├── README.md               # This file
 │   ├── epics.md                # Project epics
 │   └── tech-spec.md            # Technical specifications
@@ -147,7 +153,8 @@ BATCH_SIZE=100             # Processing batch size
 ## 📈 Monitoring & Operations
 
 ### Logs
-- **Location**: `src/sku-cleanup-tool/logs/sku_cleanup.log` (or `/var/log/sku-cleanup/sku-cleanup.log` after deployment)
+- **Development Location**: `src/sku-cleanup-tool/logs/sku_cleanup.log`
+- **Production Location**: `/var/log/sku-cleanup/sku-cleanup.log` (after deployment setup)
 - **Size**: Grows with usage - typically 10-50MB for regular daily runs
 - **Rotation**: Automated daily rotation configured (30-day retention)
 - **Content**: Detailed execution logs, API responses, and decision trails
@@ -210,8 +217,8 @@ This project is part of the BMAD (Business Management Automation Development) fr
 
 ## 🆘 Support
 
-- **Documentation**: See `src/sku-cleanup-tool/README.md` for detailed usage
-- **Logs**: Check `src/sku-cleanup-tool/logs/` for execution details
+- **Documentation**: See `src/sku-cleanup-tool/docs/README.md` for detailed usage
+- **Logs**: Check `src/sku-cleanup-tool/logs/` (development) or `/var/log/sku-cleanup/` (production) for execution details
 - **Issues**: Report bugs and feature requests in the repository
 
 ---
