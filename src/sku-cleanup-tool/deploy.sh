@@ -17,13 +17,15 @@ fi
 echo "📦 Checking Python dependencies..."
 if ! python3 -c "import boto3, requests, schedule" 2>/dev/null; then
     echo "Installing Python dependencies..."
-    pip3 install -r requirements.txt
+    pip3 install -r config/requirements.txt
 fi
 
 # Set up log rotation
 echo "📝 Setting up log rotation..."
+LOG_DIR="/var/log/sku-cleanup"
+sudo mkdir -p $LOG_DIR
 sudo tee /etc/logrotate.d/sku-cleanup >/dev/null <<EOF
-/var/log/sku-cleanup.log {
+$LOG_DIR/*.log {
     daily
     rotate 30
     compress
@@ -39,7 +41,8 @@ EOF
 
 # Create cron job for daily execution
 echo "⏰ Setting up daily automation..."
-CRON_JOB="0 2 * * * cd $(pwd) && /usr/bin/python3 main.py >> /var/log/sku-cleanup.log 2>&1"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CRON_JOB="0 2 * * * cd $PROJECT_DIR && /usr/bin/python3 main.py >> $LOG_DIR/sku-cleanup.log 2>&1"
 
 # Check if cron job already exists
 if crontab -l | grep -q "sku-cleanup"; then
@@ -52,11 +55,16 @@ fi
 
 # Create monitoring script
 echo "📊 Creating monitoring script..."
-cat > monitor.sh <<'EOF'
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="/var/log/sku-cleanup"
+EMAIL="sales@bison.management"  # Production email for SKU cleanup notifications
+
+cat > "$PROJECT_DIR/monitor.sh" <<'EOF'
 #!/bin/bash
 # SKU Cleanup Monitor - Check daily execution status
 
-LOG_FILE="/var/log/sku-cleanup.log"
+LOG_FILE="/var/log/sku-cleanup/sku-cleanup.log"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EMAIL="sales@bison.management"  # Production email for SKU cleanup notifications
 
 # Check if log file exists and has recent entries
@@ -71,17 +79,24 @@ if [ -f "$LOG_FILE" ]; then
     fi
 else
     echo "❌ Log file not found: $LOG_FILE"
+    echo "Run may have failed or logs not yet created" | mail -s "SKU Cleanup Alert - Missing Log File" $EMAIL
 fi
 
 # Check for errors in recent logs
-ERROR_COUNT=$(tail -100 "$LOG_FILE" | grep -c "ERROR")
+ERROR_COUNT=$(tail -100 "$LOG_FILE" 2>/dev/null | grep -c "ERROR" || echo "0")
 if [ "$ERROR_COUNT" -gt 0 ]; then
     echo "⚠️  Found $ERROR_COUNT errors in recent logs"
-    tail -20 "$LOG_FILE" | grep "ERROR" | mail -s "SKU Cleanup Errors - $ERROR_COUNT errors found" $EMAIL
+    tail -20 "$LOG_FILE" 2>/dev/null | grep "ERROR" | mail -s "SKU Cleanup Errors - $ERROR_COUNT errors found" $EMAIL
+fi
+
+# Check for successful runs
+SUCCESS_COUNT=$(tail -50 "$LOG_FILE" 2>/dev/null | grep -c "Successfully Deleted" || echo "0")
+if [ "$SUCCESS_COUNT" -gt 0 ]; then
+    echo "✅ Found $SUCCESS_COUNT successful deletions in recent runs"
 fi
 EOF
 
-chmod +x monitor.sh
+chmod +x "$PROJECT_DIR/monitor.sh"
 
 # Create systemd service (optional, for more robust deployment)
 echo "🔧 Creating systemd service (optional)..."
@@ -93,10 +108,11 @@ After=network.target
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory=$(pwd)
-ExecStart=/usr/bin/python3 $(pwd)/main.py
+WorkingDirectory=$PROJECT_DIR
+ExecStart=/usr/bin/python3 $PROJECT_DIR/main.py
 Restart=always
 RestartSec=300
+Environment=PYTHONPATH=$PROJECT_DIR
 
 [Install]
 WantedBy=multi-user.target
@@ -117,12 +133,13 @@ echo "✅ Monitoring script created"
 echo "✅ Systemd service available (optional)"
 echo ""
 echo "📋 Next Steps:"
-echo "1. Review and test the setup: python3 main.py"
-echo "2. Monitor execution: ./monitor.sh"
-echo "3. Check logs: tail -f /var/log/sku-cleanup.log"
+echo "1. Review and test the setup: cd $PROJECT_DIR && python3 main.py"
+echo "2. Monitor execution: cd $PROJECT_DIR && ./monitor.sh"
+echo "3. Check logs: tail -f $LOG_DIR/sku-cleanup.log"
 echo "4. Optional: Enable systemd service for better reliability"
 echo ""
 echo "⚠️  Remember to:"
-echo "   - Add .env to .gitignore"
+echo "   - Add .env to .gitignore (already configured)"
 echo "   - Never commit credentials to version control"
 echo "   - Monitor the first few automated runs"
+echo "   - Project directory: $PROJECT_DIR"

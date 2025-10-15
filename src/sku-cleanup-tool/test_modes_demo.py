@@ -5,7 +5,7 @@ Demo script showing different testing modes for the SKU cleanup tool
 
 import os
 import sys
-from config import config
+from core.config import config
 
 def demo_test_modes():
     """Demonstrate different testing configurations"""

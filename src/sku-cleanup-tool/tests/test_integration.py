@@ -8,12 +8,12 @@ import os
 from unittest.mock import patch, MagicMock, mock_open
 from datetime import datetime, timedelta
 
-from data_processor import DataProcessor
-from amazon_api import AmazonAPI
+from core.data_processor import DataProcessor
+from core.amazon_api import AmazonAPI
 from report_generator import ReportGenerator
 from monitoring_example import ProductionMonitor
-from utils import parse_amazon_date
-from config import CleanupSettings, AmazonCredentials
+from core.utils import parse_amazon_date
+from core.config import CleanupSettings, AmazonCredentials
 
 
 class TestCompleteWorkflowIntegration:

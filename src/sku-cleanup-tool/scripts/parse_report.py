@@ -5,7 +5,7 @@ Parse the downloaded merchant listings report
 import csv
 import io
 from datetime import datetime
-from data_processor import DataProcessor
+from core.data_processor import DataProcessor
 
 def parse_report_data():
     # Get the report data (this would normally be downloaded)

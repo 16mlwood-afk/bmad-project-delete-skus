@@ -10,10 +10,18 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any
 
-from config import config
-from amazon_api import AmazonAPI
-from data_processor import DataProcessor
-from report_generator import ReportGenerator
+try:
+    # Try relative imports (when run as part of package)
+    from .core.config import config
+    from .core.amazon_api import AmazonAPI
+    from .core.data_processor import DataProcessor
+    from .lib.report_generator import ReportGenerator
+except ImportError:
+    # Fall back to absolute imports (when run as script)
+    from core.config import config
+    from core.amazon_api import AmazonAPI
+    from core.data_processor import DataProcessor
+    from lib.report_generator import ReportGenerator
 
 # Configure logging
 logging.basicConfig(

@@ -3,8 +3,8 @@
 Check report status and download when ready
 """
 import time
-from amazon_api import AmazonAPI
-from config import config
+from core.amazon_api import AmazonAPI
+from core.config import config
 
 def check_and_download_report():
     api = AmazonAPI(config.credentials)

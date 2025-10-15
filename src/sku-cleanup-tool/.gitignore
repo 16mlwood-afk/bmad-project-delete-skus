@@ -32,9 +32,11 @@ wheels/
 # Logs
 *.log
 logs/
+../logs/
 
 # Reports (optional - uncomment if you want to track reports in git)
 # reports/
+../reports/
 
 # IDE
 .vscode/
@@ -56,3 +58,19 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Testing and coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+
+# Debug output
+debug_output.txt
+../debug_output.txt
+
+# Virtual environments
+venv/
+.env
+.env.local

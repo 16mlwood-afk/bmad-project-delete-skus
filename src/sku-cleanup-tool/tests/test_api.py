@@ -3,7 +3,7 @@
 Simple API test to debug the 403 error
 """
 import requests
-from config import config
+from core.config import config
 
 def test_api_access():
     # Get access token

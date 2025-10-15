@@ -1,6 +1,42 @@
-# Simple SKU Cleanup Tool
+# 🚀 Amazon SKU Cleanup Tool
 
-Automated cleanup tool for Amazon FBA sellers to remove old, non-selling SKUs from their catalog.
+**Automated cleanup tool for Amazon FBA sellers to remove old, non-selling SKUs from their catalog.**
+
+## 📁 Project Structure
+
+```
+sku-cleanup-tool/           # 🚀 Main Application
+├── core/                   # 🧠 Core Business Logic
+│   ├── amazon_api.py       # Amazon SP-API integration
+│   ├── data_processor.py   # SKU filtering and processing
+│   ├── config.py          # Configuration management
+│   ├── resilience.py      # Error handling and retries
+│   └── utils.py           # Helper utilities
+├── lib/                   # 📚 Main Application Files
+│   ├── main.py            # Entry point
+│   └── report_generator.py # Report creation
+├── email/                 # 📧 Email Functionality
+│   ├── gmail_oauth_sender.py
+│   ├── email_external.py
+│   └── setup_gmail.py
+├── scripts/               # 🔧 Utility Scripts
+│   ├── download_and_analyze.py
+│   ├── check_report.py
+│   └── verify_run_success.py
+├── tests/                 # 🧪 Test Suite
+├── docs/                  # 📖 Documentation
+│   └── README.md          # This file
+├── config/                # ⚙️ Configuration Files
+│   ├── requirements.txt
+│   ├── mypy.ini
+│   ├── pytest.ini
+│   └── env.example
+├── main.py                # 🚪 Entry point (root level)
+├── report_generator.py    # 📊 Report generator (root level)
+├── token.json             # 🔑 OAuth token storage
+├── Makefile              # 🏗️ Build automation
+└── pyproject.toml        # 📦 Package configuration
+```
 
 ## Overview
 
@@ -27,13 +63,16 @@ Perfect for maintaining a clean Amazon catalog without manual intervention.
 ### 1. Installation
 
 ```bash
-cd sku-cleanup-tool
-pip install -r requirements.txt
+# Navigate to project root
+cd /path/to/bmad-project-delete-skus/src/sku-cleanup-tool
+
+# Install dependencies
+pip install -r config/requirements.txt
 ```
 
 ### 2. Configuration
 
-1. Copy `env.example` to `.env`
+1. Copy `config/env.example` to `.env`
 2. Fill in your Amazon SP-API credentials:
    - AWS Access Key ID & Secret
    - Amazon Seller ID
@@ -43,10 +82,20 @@ pip install -r requirements.txt
 ### 3. First Run (Dry Run)
 
 ```bash
-python main.py
+# From project root
+python src/sku-cleanup-tool/main.py
 ```
 
 This will analyze your catalog and show what would be deleted without actually deleting anything.
+
+### 4. Directory Navigation
+
+- **Core business logic**: `core/` directory
+- **Email functionality**: `email/` directory
+- **Utility scripts**: `scripts/` directory
+- **Tests**: `tests/` directory
+- **Configuration**: `config/` directory
+- **Documentation**: `docs/` directory
 
 ### 4. Production Run
 
@@ -56,6 +105,22 @@ DRY_RUN=false
 
 # Then run:
 python main.py
+```
+
+### 5. Development Workflow
+
+```bash
+# Run tests
+pytest tests/
+
+# Type checking
+mypy core/ lib/
+
+# Format code
+black core/ lib/ tests/
+
+# Install as package (for development)
+pip install -e .
 ```
 
 ## Testing Modes

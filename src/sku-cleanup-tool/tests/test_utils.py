@@ -7,7 +7,7 @@ from unittest.mock import patch, mock_open
 import os
 import tempfile
 
-from utils import (
+from core.utils import (
     parse_amazon_date,
     format_duration,
     safe_int,

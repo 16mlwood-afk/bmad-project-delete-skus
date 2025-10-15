@@ -3,10 +3,10 @@
 Download the actual report and run full analysis
 """
 import time
-from amazon_api import AmazonAPI
-from data_processor import DataProcessor
+from core.amazon_api import AmazonAPI
+from core.data_processor import DataProcessor
 from report_generator import ReportGenerator
-from config import config
+from core.config import config
 
 def download_and_analyze():
     print("🚀 Starting full SKU cleanup analysis...")

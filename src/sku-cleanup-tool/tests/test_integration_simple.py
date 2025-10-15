@@ -7,7 +7,7 @@ import tempfile
 import os
 from datetime import datetime, timedelta
 
-from data_processor import DataProcessor
+from core.data_processor import DataProcessor
 from report_generator import ReportGenerator
 from monitoring_example import ProductionMonitor
 

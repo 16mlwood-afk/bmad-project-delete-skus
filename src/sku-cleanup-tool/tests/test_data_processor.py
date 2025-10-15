@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from data_processor import DataProcessor
+from core.data_processor import DataProcessor
 
 
 class TestDataProcessor:

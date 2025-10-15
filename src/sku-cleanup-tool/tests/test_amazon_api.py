@@ -7,7 +7,7 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 from requests.exceptions import RequestException, ConnectionError, Timeout
 
-from amazon_api import AmazonAPI
+from core.amazon_api import AmazonAPI
 
 
 class TestAmazonAPI:

@@ -1,12 +1,6 @@
-# 🚀 BMAD Project Workspace
+# 🚀 Amazon SKU Cleanup Tool
 
-**Amazon SKU Cleanup Tool with BMAD Framework Integration**
-
-This workspace contains:
-- **Main Project**: Amazon SKU Cleanup Tool (in `src/sku-cleanup-tool/`)
-- **BMAD Framework**: AI-powered development framework (in `bmad/` and `framework/bmad-method/`)
-- **Documentation**: Project docs and guides (in `docs/`)
-- **Tools & Environment**: Development tools and virtual environment (in `tools/`)
+**Automated cleanup of obsolete Amazon FBA inventory with production-ready reliability and safety features.**
 
 ## 🎯 Overview
 
@@ -43,7 +37,7 @@ This tool automates the cleanup of old Amazon FBA SKUs that are no longer sellin
 ### Environment Setup
 ```bash
 # Copy and configure environment variables
-cp src/sku-cleanup-tool/env.example src/sku-cleanup-tool/.env
+cp sku-cleanup-tool/env.example sku-cleanup-tool/.env
 
 # Edit .env with your Amazon API credentials:
 # AWS_ACCESS_KEY_ID=your_key
@@ -57,43 +51,29 @@ cp src/sku-cleanup-tool/env.example src/sku-cleanup-tool/.env
 ### Production Deployment
 ```bash
 # Test run (dry run mode)
-DRY_RUN=true python3 src/sku-cleanup-tool/main.py
+DRY_RUN=true python3 sku-cleanup-tool/main.py
 
 # Production run
-DRY_RUN=false python3 src/sku-cleanup-tool/main.py
+DRY_RUN=false python3 sku-cleanup-tool/main.py
 
 # Daily automated execution
-0 2 * * * cd /path/to/project && python3 src/sku-cleanup-tool/main.py >> src/sku-cleanup-tool/logs/daily_cleanup.log 2>&1
+0 2 * * * cd /path/to/project && python3 sku-cleanup-tool/main.py >> logs/daily_cleanup.log 2>&1
 ```
 
 ## 📁 Project Structure
 
 ```
-📦 BMAD Project Workspace
-├── 📁 src/
-│   └── 📁 sku-cleanup-tool/    # 🚀 Main Application
-│       ├── main.py             # Entry point
-│       ├── amazon_api.py       # Amazon API integration
-│       ├── data_processor.py   # Business logic and filtering
-│       ├── config.py           # Configuration management
-│       ├── resilience.py       # Error handling and retries
-│       ├── logs/               # Execution logs
-│       └── reports/            # Generated reports
-├── 📁 bmad/                    # 🤖 BMAD Framework (Installed)
-│   ├── core/                   # Core BMAD system
-│   ├── bmm/                    # BMAD Method module
-│   └── utility/                # Utility components
-├── 📁 framework/
-│   └── 📁 bmad-method/         # 📚 BMAD Source Code (Separate repo)
-├── 📁 docs/                    # 📖 Documentation
-│   ├── README.md               # This file
-│   ├── epics.md                # Project epics
-│   └── tech-spec.md            # Technical specifications
-├── 📁 tools/                   # 🔧 Development Tools
-│   ├── venv/                   # Python virtual environment
-│   ├── deploy_to_git.sh        # Deployment script
-│   └── monitor.sh              # Monitoring script
-└── 📁 stories/                 # 📊 BMAD Method Stories
+├── sku-cleanup-tool/           # Main application
+│   ├── main.py                 # Entry point
+│   ├── amazon_api.py           # Amazon API integration
+│   ├── data_processor.py       # Business logic and filtering
+│   ├── config.py               # Configuration management
+│   ├── resilience.py           # Error handling and retries
+│   ├── monitoring_example.py   # Production monitoring example
+│   ├── logs/                   # Execution logs
+│   └── reports/                # Generated reports
+├── bmad/                       # BMAD framework components
+└── docs/                       # Documentation and guides
 ```
 
 ## 🔧 Configuration
@@ -117,7 +97,7 @@ BATCH_SIZE=100             # Processing batch size
 ## 📈 Monitoring & Operations
 
 ### Logs
-- **Location**: `src/sku-cleanup-tool/logs/sku_cleanup.log`
+- **Location**: `sku-cleanup-tool/logs/sku_cleanup.log`
 - **Size**: Currently 31.3 MB with comprehensive audit trail
 - **Rotation**: Recommended for production deployment
 
@@ -173,8 +153,8 @@ This project is part of the BMAD (Business Management Automation Development) fr
 
 ## 🆘 Support
 
-- **Documentation**: See `src/sku-cleanup-tool/README.md` for detailed usage
-- **Logs**: Check `src/sku-cleanup-tool/logs/` for execution details
+- **Documentation**: See `sku-cleanup-tool/README.md` for detailed usage
+- **Logs**: Check `sku-cleanup-tool/logs/` for execution details
 - **Issues**: Report bugs and feature requests in the repository
 
 ---

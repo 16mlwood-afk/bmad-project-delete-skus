@@ -8,7 +8,7 @@ import requests
 from unittest.mock import Mock, patch, MagicMock
 from requests.exceptions import ConnectionError, Timeout, HTTPError
 
-from resilience import (
+from core.resilience import (
     exponential_backoff,
     CircuitBreaker,
     CircuitBreakerConfig,
@@ -18,7 +18,7 @@ from resilience import (
     create_session_with_pool,
     get_api_session
 )
-from config import ResilienceSettings, CleanupSettings, Config
+from core.config import ResilienceSettings, CleanupSettings, Config
 
 
 class TestExponentialBackoff:
@@ -263,7 +263,7 @@ class TestErrorHandlingIntegration:
 
     def test_fba_check_error_categorization(self):
         """Test that FBA check errors are properly categorized"""
-        from data_processor import DataProcessor
+        from core.data_processor import DataProcessor
 
         processor = DataProcessor()
 
@@ -284,7 +284,7 @@ class TestErrorHandlingIntegration:
 
     def test_graceful_degradation_on_api_failure(self):
         """Test that processing continues gracefully when FBA API fails"""
-        from data_processor import DataProcessor
+        from core.data_processor import DataProcessor
 
         # Create processor with mock API
         mock_amazon_api = Mock()

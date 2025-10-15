@@ -6,7 +6,7 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-from config import Config, CleanupSettings, ResilienceSettings, AmazonCredentials
+from core.config import Config, CleanupSettings, ResilienceSettings, AmazonCredentials
 
 
 class TestCleanupSettings:

@@ -16,9 +16,9 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-from data_processor import DataProcessor
+from core.data_processor import DataProcessor
 from report_generator import ReportGenerator
-from amazon_api import AmazonAPI
+from core.amazon_api import AmazonAPI
 
 
 class TestPerformanceMetrics:

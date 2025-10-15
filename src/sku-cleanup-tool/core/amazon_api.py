@@ -11,8 +11,8 @@ import boto3
 from botocore.exceptions import ClientError
 from urllib.parse import quote
 
-from config import AmazonCredentials, config
-from resilience import (
+from .config import AmazonCredentials, config
+from .resilience import (
     exponential_backoff,
     CircuitBreaker,
     CircuitBreakerConfig,
