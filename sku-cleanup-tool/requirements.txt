@@ -10,3 +10,9 @@ pytest-cov>=4.0.0         # Coverage reporting
 
 # Optional: For better logging and CLI interface
 colorlog>=6.7.0            # Colored console logging
+
+# Gmail OAuth 2.0 (for company email accounts)
+google-auth>=2.15.0        # Google authentication library
+google-auth-oauthlib>=1.1.0 # OAuth 2.0 flow for Gmail API
+google-auth-httplib2>=0.1.0 # HTTP library for Google APIs
+google-api-python-client>=2.70.0 # Google API Python client
