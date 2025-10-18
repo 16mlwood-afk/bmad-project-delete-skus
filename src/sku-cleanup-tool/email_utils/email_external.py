@@ -95,7 +95,8 @@ def get_cleanup_summary():
     try:
         # Read the main log file (last 100 lines for recent summary)
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        log_file = os.path.join(script_dir, 'logs', 'sku_cleanup.log')
+        # Look for log file in the parent directory (where the main script runs from)
+        log_file = os.path.join(script_dir, '..', 'logs', 'sku_cleanup.log')
         if not os.path.exists(log_file):
             return None
 
@@ -112,15 +113,21 @@ def get_cleanup_summary():
 
         for line in reversed(lines):
             if 'Total SKUs Processed:' in line:
-                total_processed = int(line.split(':')[1].strip())
+                # Split on the first colon after the field name to avoid timestamp colons
+                colon_index = line.find('Total SKUs Processed:') + len('Total SKUs Processed:')
+                total_processed = int(line[colon_index:].strip())
             elif 'Eligible for Deletion:' in line:
-                eligible_for_deletion = int(line.split(':')[1].strip())
+                colon_index = line.find('Eligible for Deletion:') + len('Eligible for Deletion:')
+                eligible_for_deletion = int(line[colon_index:].strip())
             elif 'Successfully Deleted:' in line:
-                successfully_deleted = int(line.split(':')[1].strip())
+                colon_index = line.find('Successfully Deleted:') + len('Successfully Deleted:')
+                successfully_deleted = int(line[colon_index:].strip())
             elif 'Errors:' in line:
-                errors = int(line.split(':')[1].strip())
+                colon_index = line.find('Errors:') + len('Errors:')
+                errors = int(line[colon_index:].strip())
             elif 'Execution Time:' in line:
-                execution_time = line.split(':')[1].strip()
+                colon_index = line.find('Execution Time:') + len('Execution Time:')
+                execution_time = line[colon_index:].strip()
 
         # Read processed SKUs file
         script_dir = os.path.dirname(os.path.abspath(__file__))

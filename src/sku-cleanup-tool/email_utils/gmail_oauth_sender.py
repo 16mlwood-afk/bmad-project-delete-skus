@@ -86,7 +86,8 @@ def should_send_email(force_send=False):
     try:
         # Read the main log file (last 100 lines for recent summary)
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        log_file = os.path.join(script_dir, 'logs', 'sku_cleanup.log')
+        # Look for log file in the parent directory (where the main script runs from)
+        log_file = os.path.join(script_dir, '..', 'logs', 'sku_cleanup.log')
         if not os.path.exists(log_file):
             return True, "No log file found - possible cleanup failure", None  # Force send if no logs
 
@@ -102,13 +103,18 @@ def should_send_email(force_send=False):
 
         for line in reversed(lines):
             if 'Total SKUs Processed:' in line:
-                total_processed = int(line.split(':')[1].strip())
+                # Split on the first colon after the field name to avoid timestamp colons
+                colon_index = line.find('Total SKUs Processed:') + len('Total SKUs Processed:')
+                total_processed = int(line[colon_index:].strip())
             elif 'Eligible for Deletion:' in line:
-                eligible_for_deletion = int(line.split(':')[1].strip())
+                colon_index = line.find('Eligible for Deletion:') + len('Eligible for Deletion:')
+                eligible_for_deletion = int(line[colon_index:].strip())
             elif 'Successfully Deleted:' in line:
-                successfully_deleted = int(line.split(':')[1].strip())
+                colon_index = line.find('Successfully Deleted:') + len('Successfully Deleted:')
+                successfully_deleted = int(line[colon_index:].strip())
             elif 'Errors:' in line:
-                errors = int(line.split(':')[1].strip())
+                colon_index = line.find('Errors:') + len('Errors:')
+                errors = int(line[colon_index:].strip())
 
         # Check for critical failure patterns
         critical_errors = []
@@ -139,7 +145,7 @@ def should_send_email(force_send=False):
             # Always send email if there's activity and it's been more than 24 hours since last email
             # This ensures users know the system is running even when no deletions occur
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            last_email_file = os.path.join(script_dir, 'logs', 'last_email_sent.txt')
+            last_email_file = os.path.join(script_dir, '..', 'logs', 'last_email_sent.txt')
             if os.path.exists(last_email_file):
                 with open(last_email_file, 'r') as f:
                     last_email_time = float(f.read().strip())
@@ -224,7 +230,7 @@ def send_email_with_recipients(recipients, subject, body, sender_email='sales@bi
 
         # Track when email was sent to prevent spam
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        last_email_file = os.path.join(script_dir, 'logs', 'last_email_sent.txt')
+        last_email_file = os.path.join(script_dir, '..', 'logs', 'last_email_sent.txt')
         os.makedirs(os.path.dirname(last_email_file), exist_ok=True)
         with open(last_email_file, 'w') as f:
             f.write(str(__import__('time').time()))
