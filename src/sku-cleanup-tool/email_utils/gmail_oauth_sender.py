@@ -23,8 +23,13 @@ def get_credentials():
     creds = None
 
     # Check if token.json exists (from previous successful auth)
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    token_file = os.path.join(script_dir, 'token.json')
+    if not os.path.exists(token_file):
+        token_file = os.path.join(script_dir, '..', 'token.json')
+
+    if os.path.exists(token_file):
+        creds = Credentials.from_authorized_user_file(token_file, SCOPES)
 
     # If no valid credentials, run OAuth flow
     if not creds or not creds.valid:
@@ -32,12 +37,20 @@ def get_credentials():
             creds.refresh(Request())
         else:
             # Run OAuth flow for first-time setup
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # Look for credentials.json in the email_utils directory first, then in parent directory
+            credentials_file = os.path.join(script_dir, 'credentials.json')
+            if not os.path.exists(credentials_file):
+                credentials_file = os.path.join(script_dir, '..', 'credentials.json')
+
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                credentials_file, SCOPES)
             creds = flow.run_local_server(port=0)
 
         # Save credentials for next run
-        with open('token.json', 'w') as token:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        token_file = os.path.join(script_dir, '..', 'token.json')
+        with open(token_file, 'w') as token:
             token.write(creds.to_json())
 
     return creds
@@ -57,18 +70,25 @@ def create_message(sender, to, subject, body):
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
     return {'raw': raw_message}
 
-def should_send_email():
+def should_send_email(force_send=False):
     """
     Determine if an email should be sent based on recent activity
+
+    Args:
+        force_send (bool): If True, always send email regardless of activity
 
     Returns:
         tuple: (should_send: bool, reason: str, summary: dict or None)
     """
+    if force_send:
+        return True, "Force send requested - sending notification", None
+
     try:
         # Read the main log file (last 100 lines for recent summary)
-        log_file = 'logs/sku_cleanup.log'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        log_file = os.path.join(script_dir, 'logs', 'sku_cleanup.log')
         if not os.path.exists(log_file):
-            return False, "No log file found", None
+            return True, "No log file found - possible cleanup failure", None  # Force send if no logs
 
         # Get last 100 lines for summary
         with open(log_file, 'r') as f:
@@ -90,10 +110,19 @@ def should_send_email():
             elif 'Errors:' in line:
                 errors = int(line.split(':')[1].strip())
 
+        # Check for critical failure patterns
+        critical_errors = []
+        for line in reversed(lines[-20:]):  # Check last 20 lines for critical errors
+            if any(pattern in line.upper() for pattern in [
+                'CRITICAL', 'FATAL', 'EXCEPTION', 'ERROR', 'FAILED',
+                'COULD NOT', 'UNABLE TO', 'CONNECTION FAILED'
+            ]):
+                critical_errors.append(line.strip())
+
         # Check if there were any meaningful changes
         has_deletions = successfully_deleted > 0
         has_eligible_skus = eligible_for_deletion > 0
-        has_errors = errors > 0
+        has_errors = errors > 0 or len(critical_errors) > 0
         has_activity = total_processed > 0
 
         # Determine if email should be sent
@@ -102,11 +131,15 @@ def should_send_email():
         elif has_eligible_skus:
             return True, f"SKUs eligible for deletion found ({eligible_for_deletion} eligible)", None
         elif has_errors:
-            return True, f"Errors occurred during execution ({errors} errors)", None
+            error_text = f"Errors occurred during execution ({errors} errors)"
+            if critical_errors:
+                error_text += f" - Critical issues: {len(critical_errors)} found"
+            return True, error_text, None
         elif has_activity:
-            # Only send if it's been more than 24 hours since last email
-            # This prevents spam when there are no changes
-            last_email_file = 'logs/last_email_sent.txt'
+            # Always send email if there's activity and it's been more than 24 hours since last email
+            # This ensures users know the system is running even when no deletions occur
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            last_email_file = os.path.join(script_dir, 'logs', 'last_email_sent.txt')
             if os.path.exists(last_email_file):
                 with open(last_email_file, 'r') as f:
                     last_email_time = float(f.read().strip())
@@ -114,10 +147,17 @@ def should_send_email():
                 hours_since_last_email = (current_time - last_email_time) / 3600
 
                 if hours_since_last_email < 24:
-                    return False, f"No changes detected, last email sent {hours_since_last_email:.1f} hours ago", None
+                    return False, f"System running normally, last email sent {hours_since_last_email:.1f} hours ago", None
 
-            return True, f"Activity detected ({total_processed} SKUs processed)", None
+            return True, f"System running normally ({total_processed} SKUs processed, no deletions needed)", None
         else:
+            # Check if cleanup process actually ran today by looking for today's timestamp
+            today = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
+            has_today_activity = any(today in line for line in lines)
+
+            if not has_today_activity:
+                return True, "No activity detected for today - possible cleanup failure", None
+
             return False, "No activity detected in logs", None
 
     except Exception as e:
@@ -183,7 +223,9 @@ def send_email_with_recipients(recipients, subject, body, sender_email='sales@bi
         print(f"✅ Email sent successfully! Message ID: {message_id}")
 
         # Track when email was sent to prevent spam
-        last_email_file = 'logs/last_email_sent.txt'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        last_email_file = os.path.join(script_dir, 'logs', 'last_email_sent.txt')
+        os.makedirs(os.path.dirname(last_email_file), exist_ok=True)
         with open(last_email_file, 'w') as f:
             f.write(str(__import__('time').time()))
 

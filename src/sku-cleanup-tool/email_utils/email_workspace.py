@@ -59,7 +59,7 @@ def main():
     to_email = "sales@bison.management"
     
     # Email content - summary of SKU cleanup execution
-    subject = ".1f"
+    subject = f"BMAD SKU Cleanup Report - {datetime.now().strftime('%Y-%m-%d')}"
     
     body = """
 🚀 SKU Cleanup Execution Summary

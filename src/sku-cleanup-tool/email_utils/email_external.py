@@ -94,9 +94,10 @@ def get_cleanup_summary():
     """Extract summary information from log files"""
     try:
         # Read the main log file (last 100 lines for recent summary)
-        log_file = 'logs/sku_cleanup.log'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        log_file = os.path.join(script_dir, 'logs', 'sku_cleanup.log')
         if not os.path.exists(log_file):
-            return None, None, None
+            return None
 
         # Get last 100 lines for summary
         with open(log_file, 'r') as f:
@@ -122,11 +123,24 @@ def get_cleanup_summary():
                 execution_time = line.split(':')[1].strip()
 
         # Read processed SKUs file
-        processed_skus_file = 'logs/processed_skus.txt'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        processed_skus_file = os.path.join(script_dir, 'logs', 'processed_skus.txt')
         processed_skus_list = []
         if os.path.exists(processed_skus_file):
-            with open(processed_skus_file, 'r') as f:
-                processed_skus_list = f.read().strip().split('\n')
+            try:
+                with open(processed_skus_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            # Handle both formats: "sku" and "sku,timestamp"
+                            if ',' in line:
+                                sku = line.split(',')[0]
+                            else:
+                                sku = line
+                            processed_skus_list.append(sku)
+            except Exception as e:
+                print(f"Warning: Could not read processed SKUs file: {e}")
+                processed_skus_list = []
 
         # Get timestamp from most recent log entry
         timestamp = "Unknown"
@@ -134,6 +148,18 @@ def get_cleanup_summary():
             if ' - ' in line and len(line.split(' - ')[0]) == 19:  # ISO timestamp format
                 timestamp = line.split(' - ')[0]
                 break
+
+        # Read current run's deleted SKUs for email notifications
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        current_deleted_file = os.path.join(script_dir, 'logs', 'current_run_deleted.txt')
+        current_deleted_skus = []
+        if os.path.exists(current_deleted_file):
+            try:
+                with open(current_deleted_file, 'r') as f:
+                    current_deleted_skus = [line.strip() for line in f if line.strip()]
+            except Exception as e:
+                print(f"Warning: Could not read current deleted SKUs file: {e}")
+                current_deleted_skus = []
 
         return {
             'total_processed': total_processed,
@@ -143,7 +169,8 @@ def get_cleanup_summary():
             'execution_time': execution_time,
             'timestamp': timestamp,
             'processed_skus_count': len(processed_skus_list),
-            'processed_skus_preview': processed_skus_list[:10] if processed_skus_list else []
+            'processed_skus_preview': processed_skus_list[:10] if processed_skus_list else [],
+            'current_deleted_skus': current_deleted_skus[:20] if current_deleted_skus else []  # Show up to 20 recently deleted SKUs
         }
 
     except Exception as e:
@@ -154,14 +181,29 @@ def send_oauth_email(to_email, subject, body, force_send=False):
     """Send email via Gmail OAuth 2.0 with smart frequency logic"""
     try:
         # Import here to avoid errors if OAuth libraries aren't installed
-        from gmail_oauth_sender import send_email_with_recipients, should_send_email, send_error_alert
+        import sys
+        import os
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, script_dir)
+
+        try:
+            from gmail_oauth_sender import send_email_with_recipients, should_send_email, send_error_alert
+        except ImportError:
+            # If direct import fails, try importing with full path
+            gmail_oauth_path = os.path.join(script_dir, 'gmail_oauth_sender.py')
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("gmail_oauth_sender", gmail_oauth_path)
+            gmail_oauth_sender = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(gmail_oauth_sender)
+            send_email_with_recipients = gmail_oauth_sender.send_email_with_recipients
+            should_send_email = gmail_oauth_sender.should_send_email
+            send_error_alert = gmail_oauth_sender.send_error_alert
 
         # Check if email should be sent (unless forced)
-        if not force_send:
-            should_send, reason, _ = should_send_email()
-            if not should_send:
-                print(f"📧 Email not sent: {reason}")
-                return True, f"Email skipped: {reason}"
+        should_send, reason, _ = should_send_email(force_send=force_send)
+        if not should_send:
+            print(f"📧 Email not sent: {reason}")
+            return True, f"Email skipped: {reason}"
 
         # Get configuration from environment
         sender_email = os.getenv('GMAIL_USER', 'sales@bison.management')
@@ -249,6 +291,16 @@ def send_oauth_email(to_email, subject, body, force_send=False):
                     </div>
                     ''' if summary['processed_skus_preview'] else ''}
 
+                    {f'''
+                    <div style="background: #d4edda; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
+                        <h3 style="margin-top: 0; color: #155724;">🗑️ SKUs Deleted This Run</h3>
+                        <div style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                            {'<br>'.join(f"<code style='background: #f8f9fa; padding: 2px 4px; border-radius: 3px; color: #d32f2f;'>{sku}</code>" for sku in summary['current_deleted_skus'])}
+                            {f"<p style='color: #155724; font-style: italic; margin: 10px 0 0 0;'>Total: {len(summary['current_deleted_skus'])} SKUs deleted in this execution</p>" if summary['current_deleted_skus'] else "<p style='color: #155724; font-style: italic;'>No SKUs were deleted in this run</p>"}
+                        </div>
+                    </div>
+                    ''' if summary else ''}
+
                     <div style="margin-top: 30px; padding: 20px; background: #d1ecf1; border-radius: 8px; border-left: 4px solid #17a2b8;">
                         <h3 style="margin-top: 0; color: #0c5460;">🔗 System Information</h3>
                         <p style="margin: 0;"><strong>System:</strong> BMAD SKU Management Platform</p>
@@ -308,9 +360,12 @@ def main():
     print(f"Subject: {subject}")
     print()
 
+    # Check if this is a forced error notification (cleanup failed)
+    force_send = "--force-error" in sys.argv or "--force" in sys.argv
+
     # Try email method based on configuration
     if email_method == 'oauth':
-        success, message = send_oauth_email(to_email, subject, body, force_send=False)
+        success, message = send_oauth_email(to_email, subject, body, force_send=force_send)
         if success:
             print("✅ Email sent successfully via Gmail OAuth 2.0")
             if "skipped" not in message.lower():
@@ -330,7 +385,18 @@ def main():
         # Test error alerting if requested
         if "--test-error-alert" in sys.argv:
             print("\n🧪 Testing error alert system...")
-            from gmail_oauth_sender import send_error_alert
+            try:
+                from gmail_oauth_sender import send_error_alert
+            except ImportError:
+                # If direct import fails, try importing with full path
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                gmail_oauth_path = os.path.join(script_dir, 'gmail_oauth_sender.py')
+                import importlib.util
+                spec = importlib.util.spec_from_file_location("gmail_oauth_sender", gmail_oauth_path)
+                gmail_oauth_sender = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(gmail_oauth_sender)
+                send_error_alert = gmail_oauth_sender.send_error_alert
+
             alert_success, alert_message = send_error_alert(
                 "Test error alert",
                 "This is a test of the error alerting system. If you receive this, error alerts are working correctly."

@@ -23,12 +23,18 @@ except ImportError:
     from core.data_processor import DataProcessor
     from lib.report_generator import ReportGenerator
 
-# Configure logging
+# Configure logging - use absolute paths to ensure correct location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+log_file = os.path.join(script_dir, 'logs', 'sku_cleanup.log')
+
+# Ensure log directory exists
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
 logging.basicConfig(
     level=getattr(logging, config.settings.log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/sku_cleanup.log'),
+        logging.FileHandler(log_file),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -41,7 +47,7 @@ class SKUCleanupTool:
         self.amazon_api = AmazonAPI(config.credentials)
         self.data_processor = DataProcessor(amazon_api=self.amazon_api)  # Pass API for FBA checks
         self.report_generator = ReportGenerator()
-        self.processed_skus_file = 'logs/processed_skus.txt'
+        self.processed_skus_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'processed_skus.txt')
 
     def run_cleanup(self) -> Dict[str, Any]:
         """
@@ -179,6 +185,9 @@ class SKUCleanupTool:
             }
 
             self.report_generator.generate_report(report_data)
+
+            # Write current run's deleted SKUs for email notifications
+            self._write_current_run_deleted_skus(deletion_results['deleted'])
 
             logger.info("SKU cleanup process completed successfully")
             return report_data
@@ -363,6 +372,21 @@ class SKUCleanupTool:
             logger.info(f"Saved {len(sku_timestamps)} processed SKUs with timestamps")
         except Exception as e:
             logger.error(f"Could not save processed SKUs: {e}")
+
+    def _write_current_run_deleted_skus(self, deleted_skus: List[str]):
+        """Write current run's deleted SKUs for email notifications"""
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            current_deleted_file = os.path.join(script_dir, 'logs', 'current_run_deleted.txt')
+            os.makedirs(os.path.dirname(current_deleted_file), exist_ok=True)
+
+            with open(current_deleted_file, 'w') as f:
+                for sku in deleted_skus:
+                    f.write(f"{sku}\n")
+
+            logger.info(f"Saved {len(deleted_skus)} current run deleted SKUs for email notifications")
+        except Exception as e:
+            logger.error(f"Could not save current run deleted SKUs: {e}")
 
     def _apply_test_mode_filter(self, raw_skus: List[Dict]) -> List[Dict]:
         """Apply test mode filtering to reduce dataset size for testing"""
